@@ -1,0 +1,14 @@
+# Image data and results.
+/MeteoDiary*
+/results
+*.jpg
+
+# Application files.
+*.exe
+*.log
+
+# Common trash files.
+*.bak
+*.tmp
+*.log
+*.~*
