@@ -97,33 +97,10 @@ public class WeatherStats {
 	}
 	
 	
-	// Implements layers blend mode: addition.
-	private static void applyMask(Picture pic) {
-		byte[] p = pic.bgr;
-		byte[] m = mask.bgr;
-		int len = Math.Min(p.Length, m.Length);
-		for (int i = 0; i < len; i++) {
-			int sum = p[i] + m[i];
-			p[i] = (byte)((sum > 255) ? 255 : sum);
-		}
-	}
-	
-	
-	// Implements layers blend mode: multiplication.
-	private static void applyBackground(Picture pic) {
-		byte[] p = pic.bgr;
-		byte[] b = background.bgr;
-		int len = Math.Min(p.Length, b.Length);
-		for (int i = 0; i < len; i++) {
-			int mul = ((int)p[i] * (int)b[i]) >> 8;
-			p[i] = (byte)((mul > 255) ? 255 : mul);
-		}
-	}
-	
-	
 	private static void analyzeImage(string imagePath) {
 		Picture pic = new Picture(imagePath);
-		applyMask(pic);
+		pic.blendAdd(mask);
+		pic.saturate(2.0);
 		pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
 		
 		if (width == 0) {
@@ -216,7 +193,7 @@ public class WeatherStats {
 	
 	private static void mapFrequencyColors(float average, int x, int y, ColorMap[] colors, out int bgr) {
 		if (average <= 0f) {
-			bgr = 0xFFFFFF; //background.getBGR(x, y); // Background.
+			bgr = 0xFFFFFF; // Background.
 		} else {
 			float lowVal = colors[0].val;
 			int minColor = colors[0].bgr;
@@ -240,7 +217,7 @@ public class WeatherStats {
 	private static void outputResult(string outName, bool needBg, Convert convert) {
 		Picture pic = new Picture(width, height, 3);
 		prepareResult(pic, convert);
-		if (needBg) applyBackground(pic);
+		if (needBg) pic.blentMultiply(background);
 		pic.save(codec, encoderParameters, outName);
 	}
 	
