@@ -119,7 +119,7 @@ public class WeatherStats {
 		
 		public int getBGR(int x, int y) {
 			int ofs = (y * stride) + (x * bytesPerPixel);
-			return (bgr[ofs + 2] << 16) | (bgr[ofs + 1] << 8) | bgr[ofs];
+			return (bgr[ofs] << 16) | (bgr[ofs + 1] << 8) | bgr[ofs + 2];
 		}
 	}
 	
@@ -183,6 +183,7 @@ public class WeatherStats {
 	}
 	
 	
+	// Implements layers blend mode: addition.
 	private static void applyMask(Picture pic) {
 		byte[] p = pic.bgr;
 		byte[] m = mask.bgr;
@@ -194,6 +195,7 @@ public class WeatherStats {
 	}
 	
 	
+	// Implements layers blend mode: multiplication.
 	private static void applyBackground(Picture pic) {
 		byte[] p = pic.bgr;
 		byte[] b = background.bgr;
