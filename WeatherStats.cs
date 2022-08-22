@@ -6,7 +6,8 @@ using System.IO;
 using System.Xml;
 
 public class WeatherStats {
-	private static TextWriter logFile;
+	public static TextWriter logFile;
+	
 	private static EncoderParameters encoderParameters;
 	private static ImageCodecInfo codec;
 	private static Picture background;
@@ -37,99 +38,12 @@ public class WeatherStats {
 	}
 	
 	
-	private struct Picture {
-		public readonly byte[] bgr;
-		public readonly int width, height, stride, bytesPerPixel;
-		private Bitmap bmp;
-		private PixelFormat pixelFormat;
-		
-		public Picture(string imagePath) {
-			this.bmp = new Bitmap(imagePath);
-			this.width = bmp.Width;
-			this.height = bmp.Height;
-			this.pixelFormat = bmp.PixelFormat;
-
-			switch (pixelFormat) {
-				case PixelFormat.Canonical:
-				case PixelFormat.Format32bppArgb:
-				case PixelFormat.Format32bppRgb:
-					bytesPerPixel = 4;
-					break;
-				case PixelFormat.Format24bppRgb:
-					bytesPerPixel = 3;
-					break;
-				default:
-					throw new Exception("Unsupported pixel format: " + pixelFormat + " - " + imagePath);
-			}
-			
-			BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, pixelFormat);
-			stride = bmpData.Stride;
-			if (stride < 0) {
-				throw new Exception("Unsupported bottom-top images (stride < 0)" + " - " + imagePath);
-			}
-			int byteSize = Math.Abs(stride) * height;
-			bgr = new byte[byteSize]; // Declare an array to hold the bytes of the bitmap.
-
-			logFile.WriteLine("Bitmap \"{0}\" format: {1} {2}x{3} stride {4}", imagePath, pixelFormat, width, height, stride);
-
-			// Copy the BGR values into the array.
-			System.Runtime.InteropServices.Marshal.Copy(bmpData.Scan0, bgr, 0, bgr.Length);
-			bmp.UnlockBits(bmpData);
-		}
-		
-		public Picture(int w, int h, int bytesPerPix) {
-			this.width = w;
-			this.height = h;
-			this.bytesPerPixel = bytesPerPix;
-
-			switch(bytesPerPixel) {
-				case 3:
-					pixelFormat = PixelFormat.Format24bppRgb;
-					break;
-				case 4:
-					pixelFormat = PixelFormat.Format32bppArgb;
-					break;
-				default:
-					throw new Exception("Unsupported bytes per pixel: " + bytesPerPixel);
-			}
-
-			bmp = new Bitmap(width, height, pixelFormat);
-			
-			BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, pixelFormat);
-			stride = bmpData.Stride;
-			if (stride < 0) {
-				throw new Exception("Unsupported bottom-top images (stride < 0)");
-			}
-			int byteSize = Math.Abs(stride) * height;
-			bgr = new byte[byteSize]; // Declare an array to hold the bytes of the bitmap.
-
-			bmp.UnlockBits(bmpData);
-		}
-		
-		public void save(string imagePath) {
-			BitmapData bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, pixelFormat);
-
-			// Copy the BGR values back to the bitmap.
-			System.Runtime.InteropServices.Marshal.Copy(bgr, 0, bmpData.Scan0, bgr.Length);
-			
-			bmp.UnlockBits(bmpData);
-			
-			bmp.Save(imagePath, codec, encoderParameters);
-		}
-		
-		public int getBGR(int x, int y) {
-			int ofs = (y * stride) + (x * bytesPerPixel);
-			return (bgr[ofs] << 16) | (bgr[ofs + 1] << 8) | bgr[ofs + 2];
-		}
-	}
-	
-	
 	private static void analyzePixel(int bgr, int ofs) {
 		int b = (bgr >> 16) & 0xFF;
 		int g = (bgr >> 8) & 0xFF;
 		int r = bgr & 0xFF;
 		
-		if ((Math.Abs(r - g) <= 32) && (Math.Abs(r - b) <= 32) && (Math.Abs(g - b) <= 32)) {
+		if ((Math.Abs(r - g) <= 16) && (Math.Abs(r - b) <= 16) && (Math.Abs(g - b) <= 16)) {
 			// Grayscale is background (land) - skip it.
 			return;
 		}
@@ -210,7 +124,7 @@ public class WeatherStats {
 	private static void analyzeImage(string imagePath) {
 		Picture pic = new Picture(imagePath);
 		applyMask(pic);
-		pic.save(imagePath.Replace("MeteoDiary", "results"));
+		pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
 		
 		if (width == 0) {
 			width = pic.width;
@@ -327,7 +241,7 @@ public class WeatherStats {
 		Picture pic = new Picture(width, height, 3);
 		prepareResult(pic, convert);
 		if (needBg) applyBackground(pic);
-		pic.save(outName);
+		pic.save(codec, encoderParameters, outName);
 	}
 	
 	
