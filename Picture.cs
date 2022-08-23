@@ -127,7 +127,7 @@ public class Picture {
 
 
 	// Implements layers blend mode: multiplication.
-	public void blentMultiply(Picture other) {
+	public void blendMultiply(Picture other) {
 		byte[] p = this.bgr;
 		byte[] m = other.bgr;
 		int len = Math.Min(p.Length, m.Length);

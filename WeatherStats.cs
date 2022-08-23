@@ -77,7 +77,7 @@ public class WeatherStats {
 		// Otherwise it is some error or mixed colors on borders.
 		unparsed[ofs]++;
 		unparsedNow++;
-		logFile.WriteLine("Unparsed: {0}, {1}, {2} at {3} ({7}, {8}) - r-b {4}, r-g {5}, g-b {6}", r, g, b, ofs, r-b, r-g, g-b, ofs % width, ofs / width);
+		//logFile.WriteLine("Unparsed: {0}, {1}, {2} at {3} ({7}, {8}) - r-b {4}, r-g {5}, g-b {6}", r, g, b, ofs, r-b, r-g, g-b, ofs % width, ofs / width);
 	}
 	
 	
@@ -99,7 +99,9 @@ public class WeatherStats {
 	
 	private static void analyzeImage(string imagePath) {
 		Picture pic = new Picture(imagePath);
-		pic.blendAdd(mask);
+		if (mask != null) {
+			pic.blendAdd(mask);
+		}
 		pic.saturate(2.0);
 		pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
 		
@@ -217,7 +219,9 @@ public class WeatherStats {
 	private static void outputResult(string outName, bool needBg, Convert convert) {
 		Picture pic = new Picture(width, height, 3);
 		prepareResult(pic, convert);
-		if (needBg) pic.blentMultiply(background);
+		if (needBg && (background != null)) {
+			pic.blendMultiply(background);
+		}
 		pic.save(codec, encoderParameters, outName);
 	}
 	
@@ -269,20 +273,30 @@ public class WeatherStats {
 	
 	public static void Main(string[] args)
 	{
-		if (args.Length < 4) {
-			Console.WriteLine("Usage: wstat <empty_img> <mask_img> <images_dir> <out_dir> [output.log]");
+		if (!Options.parse(args)) {
 			return;
 		}
-		logFile = (args.Length > 4) ? new StreamWriter(args[4], false, System.Text.Encoding.UTF8) : Console.Out;
+		string logName = Options.get("log");
+		if (logName != null) {
+			logFile = new StreamWriter(logName, false, System.Text.Encoding.UTF8);
+		} else {
+			logFile = Console.Out;
+		}
+		
+		string bgName = Options.get("bg");
+		if (bgName != null) {
+			background = new Picture(bgName);
+		}
+		string maskName = Options.get("mask");
+		if (maskName != null) {
+			mask = new Picture(maskName);
+		}
 		
 		prepareEncoder("image/jpeg");
 
-		background = new Picture(args[0]);
-		mask = new Picture(args[1]);
-		
-		analyzeImages(args[2]);
+		analyzeImages(Options.get("imgdir"));
 		analyzeFinal();
-		outputResults(args[3], ".jpg");
+		outputResults(Options.get("outdir"), ".jpg");
 
 		logFile.Flush();
 		logFile.Close();
