@@ -103,7 +103,9 @@ public class WeatherStats {
 			pic.blendAdd(mask);
 		}
 		pic.saturate(2.0);
-		pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
+		if (Options.getBool("p")) {
+			pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
+		}
 		
 		if (width == 0) {
 			width = pic.width;

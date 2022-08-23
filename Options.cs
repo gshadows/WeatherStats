@@ -32,10 +32,11 @@ public class Options {
 
 
 	private static readonly Dictionary<string,Opt> namedOptions = new Dictionary<string,Opt> {
-		{"bg",		new Opt(false, false, null, "Background map image")},
-		{"mask",	new Opt(false, false, null, "Mask image to subtract before analyze")},
-		{"log",		new Opt(false, false, null, "Log file name")},
-		{"mult",	new Opt(false, false, null, "Output values multiplication coefficient")},
+		{"bg",		new Opt(false, false, null,		"Background map image")},
+		{"mask",	new Opt(false, false, null,		"Mask image to subtract before analyze")},
+		{"log",		new Opt(false, false, null,		"Log file name")},
+		{"mult",	new Opt(false, false, null,		"Output values multiplication coefficient")},
+		{"p",		new Opt(true,  false, "false",	"Output preprocessed images (for debug)")},
 	};
 	private static readonly IdOpt[] unnamedOptions = new IdOpt[] {
 		new IdOpt("imgdir",		false, true, null, "Analyze images diretory"),
@@ -54,7 +55,13 @@ public class Options {
 		Console.WriteLine("Options:");
 		foreach (KeyValuePair<string, Opt> entry in namedOptions) {
 			Opt opt = entry.Value;
-			Console.WriteLine("  {0}{1}\t\t{2} - {3}", (opt.flag ? "-" : "--"), entry.Key, (opt.mandatory ? "*mandatory" : ("def: " + ((opt.defVal != null) ? opt.defVal : "(empty)"))), opt.help);
+			Console.WriteLine("  {0}{1}{2}{3} - {4}",
+				(opt.flag ? "-" : "--"),
+				entry.Key,
+				((entry.Key.Length >= 4) ? "\t" : "\t\t"),
+				(opt.mandatory ? "*mandatory" : ("def: " + ((opt.defVal != null) ? opt.defVal : "(empty)"))),
+				opt.help
+			);
 		}
 		Console.WriteLine();
 	}
