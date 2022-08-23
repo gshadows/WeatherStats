@@ -165,7 +165,7 @@ public class WeatherStats {
 	}
 	
 	
-	private static void mapColor(float v, int bgrMin, int bgrMax, out int bgr) {
+	private static void mapColor(double v, int bgrMin, int bgrMax, out int bgr) {
 		int bmin = ((bgrMin >> 16) & 0xFF);
 		int gmin = ((bgrMin >> 8) & 0xFF);
 		int rmin = (bgrMin & 0xFF);
@@ -180,9 +180,9 @@ public class WeatherStats {
 	
 	
 	private struct ColorMap {
-		public readonly float val;
+		public readonly double val;
 		public readonly int bgr;
-		public ColorMap(float val, int bgr) { this.val = val; this.bgr = bgr; }
+		public ColorMap(double val, int bgr) { this.val = val; this.bgr = bgr; }
 	}
 	private static ColorMap[] mainColors = {
 		new ColorMap( 0.00f, 0xFFFFFF ), // White.
@@ -193,15 +193,15 @@ public class WeatherStats {
 	};
 	
 	
-	private static void mapFrequencyColors(float average, int x, int y, ColorMap[] colors, out int bgr) {
+	private static void mapFrequencyColors(double average, int x, int y, ColorMap[] colors, out int bgr) {
 		if (average <= 0f) {
 			bgr = 0xFFFFFF; // Background.
 		} else {
-			float lowVal = colors[0].val;
+			double lowVal = colors[0].val;
 			int minColor = colors[0].bgr;
 			foreach (ColorMap map in colors) {
 				if (average < map.val) {
-					float correctedAverage = (average - lowVal) * (map.val - lowVal);
+					double correctedAverage = (average - lowVal) * (map.val - lowVal);
 					mapColor(average, minColor, map.bgr, out bgr);
 					//logFile.WriteLine("avg {0} < {1} -> {2} -> {3:X6}", average, map.val, correctedAverage, bgr);
 					return;
@@ -233,16 +233,17 @@ public class WeatherStats {
 		if (!outDir.EndsWith("\\")) {
 			outDir += "\\";
 		}
+		double mult = Options.getDouble("mult");
 
 		logFile.WriteLine("Generating image: overall");
 		outputResult(outDir + "overall" + ext, true, (int x, int y, out int bgr) => {
-			float average = overall[y * width + x] / 4f / analyzedCount;
+			double average = overall[y * width + x] * mult / 4 / analyzedCount;
 			mapFrequencyColors(average, x, y, mainColors, out bgr);
 		});
 
 		logFile.WriteLine("Generating image: wind");
 		outputResult(outDir + "wind" + ext, true, (int x, int y, out int bgr) => {
-			float average = wind[y * width + x] / 4f / analyzedCount;
+			double average = wind[y * width + x] * mult  / 4f / analyzedCount;
 			mapFrequencyColors(average, x, y, mainColors, out bgr);
 		});
 
