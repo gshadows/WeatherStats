@@ -37,6 +37,8 @@ public class Options {
 		{"log",		new Opt(false, false, null,		"Log file name")},
 		{"mult",	new Opt(false, false, null,		"Output values multiplication coefficient")},
 		{"p",		new Opt(true,  false, "false",	"Output preprocessed images (for debug)")},
+		{"prepdir",	new Opt(false, false, null,		"Preprocessed images directory (outdir if not set)")},
+		{"quality",	new Opt(false, false, "99",		"Output image compression quality (percent)")},
 	};
 	private static readonly IdOpt[] unnamedOptions = new IdOpt[] {
 		new IdOpt("imgdir",		false, true, null, "Analyze images diretory"),

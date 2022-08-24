@@ -104,7 +104,13 @@ public class WeatherStats {
 		}
 		pic.saturate(2.0);
 		if (Options.getBool("p")) {
-			pic.save(codec, encoderParameters, imagePath.Replace("MeteoDiary", "results"));
+			string prepDir = Options.get("prepdir");
+			if (prepDir == null) {
+				prepDir = Options.get("outdir");
+			}
+			string prepPath = replacePath(imagePath, prepDir);
+			createPathForFile(prepPath);
+			pic.save(codec, encoderParameters, prepPath);
 		}
 		
 		if (width == 0) {
@@ -116,6 +122,13 @@ public class WeatherStats {
 		unparsedNow = 0;
 		analyzeImageData(pic);
 		logFile.WriteLine("Unparsed: {0}%", (int)(unparsedNow * 10000f / width / height) / 100f);
+	}
+	
+	
+	private static string replacePath(string pathName, string newPath) {
+		int lastSlash = pathName.LastIndexOf("\\");
+		lastSlash = (lastSlash >= 0) ? (lastSlash + 1) : 0;
+		return newPath + pathName.Substring(lastSlash);
 	}
 	
 	
@@ -237,6 +250,8 @@ public class WeatherStats {
 		}
 		double mult = Options.getDouble("mult");
 
+		System.IO.Directory.CreateDirectory(outDir);
+
 		logFile.WriteLine("Generating image: overall");
 		outputResult(outDir + "overall" + ext, true, (int x, int y, out int bgr) => {
 			double average = overall[y * width + x] * mult / 4 / analyzedCount;
@@ -260,17 +275,30 @@ public class WeatherStats {
 	}
 	
 	
-	private static void prepareEncoder(string mime) {
-		// Prepare output image codec.
+	/// Prepare output image codec.
+	private static void prepareEncoder() {
+		string mime = "image/jpeg";
+		long quality = Options.getInt("quality");
+		
 		ImageCodecInfo[] encoders = ImageCodecInfo.GetImageEncoders();
 		foreach (ImageCodecInfo imageCodec in encoders) {
 			if (imageCodec.MimeType == mime) {
 				codec = imageCodec;
 				encoderParameters = new EncoderParameters(1);
-				encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, 99L); // 99% quality JPEG.
+				encoderParameters.Param[0] = new EncoderParameter(Encoder.Quality, quality);
 				break;
 			}
         }
+	}
+	
+	
+	public static void createPathForFile(string filePath) {
+		int lastSlash = filePath.LastIndexOf("\\");
+		if (lastSlash >= 0) {
+			string imageDir = filePath.Substring(0, lastSlash);
+			System.IO.Directory.CreateDirectory(imageDir);
+		}
+
 	}
 	
 	
@@ -281,6 +309,7 @@ public class WeatherStats {
 		}
 		string logName = Options.get("log");
 		if (logName != null) {
+			createPathForFile(logName);
 			logFile = new StreamWriter(logName, false, System.Text.Encoding.UTF8);
 		} else {
 			logFile = Console.Out;
@@ -295,11 +324,15 @@ public class WeatherStats {
 			mask = new Picture(maskName);
 		}
 		
-		prepareEncoder("image/jpeg");
+		prepareEncoder();
 
 		analyzeImages(Options.get("imgdir"));
-		analyzeFinal();
-		outputResults(Options.get("outdir"), ".jpg");
+		if (analyzedCount > 0) {
+			analyzeFinal();
+			outputResults(Options.get("outdir"), ".jpg");
+		} else {
+			logFile.WriteLine("No images found at path \"{0}\"", Options.get("imgdir"));
+		}
 
 		logFile.Flush();
 		logFile.Close();
