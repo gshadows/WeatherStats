@@ -208,7 +208,7 @@ public class WeatherStats {
 	};
 	
 	
-	private static void mapFrequencyColors(double average, int x, int y, ColorMap[] colors, out int bgr) {
+	private static void mapFrequencyColors(double average, ColorMap[] colors, out int bgr) {
 		if (average <= 0f) {
 			bgr = 0xFFFFFF; // Background.
 		} else {
@@ -275,7 +275,7 @@ public class WeatherStats {
 		outputResult(outDir + "overall" + ext, true, (int x, int y, out int bgr) => {
 			double average = overall[y * width + x] * mult / 4f / analyzedCount;
 			if (average > maxAvg) maxAvg = average;
-			mapFrequencyColors(average, x, y, mainColors, out bgr);
+			mapFrequencyColors(average, mainColors, out bgr);
 		});
 		logFile.WriteLine("Average max: {0}", maxAvg);
 
@@ -291,7 +291,7 @@ public class WeatherStats {
 		outputResult(outDir + "wind" + ext, true, (int x, int y, out int bgr) => {
 			double average = wind[y * width + x] * mult  / 4f / analyzedCount;
 			if (average > maxAvg) maxAvg = average;
-			mapFrequencyColors(average, x, y, mainColors, out bgr);
+			mapFrequencyColors(average, mainColors, out bgr);
 		});
 		logFile.WriteLine("Average max: {0}", maxAvg);
 
@@ -335,19 +335,7 @@ public class WeatherStats {
 	}
 	
 	
-	public static void Main(string[] args)
-	{
-		if (!Options.parse(args)) {
-			return;
-		}
-		string logName = Options.get("log");
-		if (logName != null) {
-			createPathForFile(logName);
-			logFile = new StreamWriter(logName, false, System.Text.Encoding.UTF8);
-		} else {
-			logFile = Console.Out;
-		}
-		
+	public static void runProcessing() {
 		string bgName = Options.get("bg");
 		if (bgName != null) {
 			background = new Picture(bgName);
@@ -365,6 +353,49 @@ public class WeatherStats {
 			outputResults(Options.get("outdir"), ".jpg");
 		} else {
 			logFile.WriteLine("No images found at path \"{0}\"", Options.get("imgdir"));
+		}
+	}
+	
+	
+	public static void testColorMapper() {
+		logFile.WriteLine("*** TEST: testColorMapper");
+		int bgr;
+		for (double average = 0.0; average <= 1.1; average += 0.05) {
+			for (int i = 0; i < mainColors.Length; i++) {
+				if (Math.Abs(mainColors[i].val - average) < 0.0001) {
+					logFile.WriteLine("+++++ BEGIN LINE {0}: {1:N2} -> {2:X6}", i, mainColors[i].val, mainColors[i].bgr);
+				}
+			}
+			mapFrequencyColors(average, mainColors, out bgr);
+			logFile.WriteLine("avg = {0:N2} --> bgr = {1:X6}", average, bgr);
+		}
+	}
+	
+	
+	public static void runTests() {
+		logFile.WriteLine("================= TEST MODE =================");
+		testColorMapper();
+	}
+	
+	
+	public static void Main(string[] args)
+	{
+		if (!Options.parse(args)) {
+			return;
+		}
+		
+		string logName = Options.get("log");
+		if (logName != null) {
+			createPathForFile(logName);
+			logFile = new StreamWriter(logName, false, System.Text.Encoding.UTF8);
+		} else {
+			logFile = Console.Out;
+		}
+		
+		if (Options.getBool("t") == true) {
+			runTests();
+		} else {
+			runProcessing();
 		}
 
 		logFile.Flush();

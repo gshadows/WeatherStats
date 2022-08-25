@@ -32,18 +32,21 @@ public class Options {
 
 
 	private static readonly Dictionary<string,Opt> namedOptions = new Dictionary<string,Opt> {
+		// ID               FLAG   MANDAT DEFAULT   HELP
 		{"bg",		new Opt(false, false, null,		"Background map image")},
 		{"mask",	new Opt(false, false, null,		"Mask image to subtract before analyze")},
 		{"log",		new Opt(false, false, null,		"Log file name")},
 		{"mult",	new Opt(false, false, "0",		"Output values multiplication: overall (1-none, 0-auto)")},
 		{"windmult",new Opt(false, false, "0",		"Output values multiplication: wind (1-none, 0-auto)")},
-		{"p",		new Opt(true,  false, "false",	"Output preprocessed images (for debug)")},
+		{"p",		new Opt(true,  false, "off",	"Output preprocessed images (for debug)")},
 		{"prepdir",	new Opt(false, false, null,		"Preprocessed images directory (outdir if not set)")},
 		{"quality",	new Opt(false, false, "99",		"Output image compression quality (percent)")},
+		{"t",		new Opt(true,  false, "off",	"Run analyzer test. Do not use, debug only.")},
 	};
 	private static readonly IdOpt[] unnamedOptions = new IdOpt[] {
-		new IdOpt("imgdir",		false, true, null, "Analyze images diretory"),
-		new IdOpt("outdir",		false, true, null, "Output directory"),
+		//         ID           FLAG   MANDAT DEFAULT   HELP
+		new IdOpt("imgdir",		false, true,  null,		"Analyze images diretory"),
+		new IdOpt("outdir",		false, true,  null,		"Output directory"),
 	};
 	
 	
@@ -75,7 +78,20 @@ public class Options {
 	}
 	
 	public static bool getBool(string id) {
-		return Boolean.Parse(config[id]);
+		switch(config[id].ToLower()) {
+			case "true":
+			case "on":
+			case "yes":
+			case "1":
+				return true;
+			case "fals":
+			case "off":
+			case "no":
+			case "0":
+				return false;
+			default:
+				throw new FormatException("Unsupported boolean value: " + id);
+		}
 	}
 	
 	public static int getInt(string id) {
@@ -163,7 +179,8 @@ public class Options {
 					return false;
 				}
 				if (isFlag) {
-					val = opt.defVal;
+					val = "true";
+					//Console.WriteLine("NAMED FLAG: {0} = {1}", arg, val);
 				} else {
 					argIdx++;
 					if (argIdx >= args.Length) {
@@ -172,7 +189,7 @@ public class Options {
 						return false;
 					}
 					val = args[argIdx];
-					//Console.WriteLine("NAMED VALUE: {0}", val);
+					//Console.WriteLine("NAMED VALUE: {0} = {1}", arg, val);
 				}
 			} else {
 				// UNNAMED.
