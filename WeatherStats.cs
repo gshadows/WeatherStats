@@ -37,14 +37,16 @@ public class WeatherStats {
 		overall = new int[size];
 	}
 	
+	private static bool xxx = false;
 	
-	private static void analyzePixel(int bgr, int ofs) {
+	private static void analyzePixelNoMask(int bgr, int ofs) {
 		int b = (bgr >> 16) & 0xFF;
 		int g = (bgr >> 8) & 0xFF;
 		int r = bgr & 0xFF;
 		
 		if ((Math.Abs(r - g) <= 16) && (Math.Abs(r - b) <= 16) && (Math.Abs(g - b) <= 16)) {
 			// Grayscale is background (land) - skip it.
+			if (xxx) logFile.WriteLine("GRAY");
 			return;
 		}
 		if ((g > 248) && (b > 248) && (r > 200)) {
@@ -80,6 +82,42 @@ public class WeatherStats {
 		//logFile.WriteLine("Unparsed: {0}, {1}, {2} at {3} ({7}, {8}) - r-b {4}, r-g {5}, g-b {6}", r, g, b, ofs, r-b, r-g, g-b, ofs % width, ofs / width);
 	}
 	
+	private static void analyzePixelWithMask(int bgr, int ofs) {
+		int b = (bgr >> 16) & 0xFF;
+		int g = (bgr >> 8) & 0xFF;
+		int r = bgr & 0xFF;
+		
+		if ((Math.Abs(r - g) <= 16) && (Math.Abs(r - b) <= 16) && (Math.Abs(g - b) <= 16)) {
+			// Grayscale is background (land) - skip it.
+			if (xxx) logFile.WriteLine("GRAY");
+			return;
+		}
+		if ((b - g > 50) && (b - r > 50)) {
+			wind[ofs]++;
+			return;
+		}
+		if (r - b > 80) {
+			if ((r - g > 80)) {
+				// Red area.
+				red[ofs]++;
+				return;
+			} else {
+				// Yellow area.
+				yellow[ofs]++;
+				return;
+			}
+		}
+		if (((g - b) > 32) && ((g - r) > 32)) {
+			// Green area.
+			green[ofs]++;
+			return;
+		}
+		// Otherwise it is some error or mixed colors on borders.
+		unparsed[ofs]++;
+		unparsedNow++;
+		//logFile.WriteLine("Unparsed: {0}, {1}, {2} at {3} ({7}, {8}) - r-b {4}, r-g {5}, g-b {6}", r, g, b, ofs, r-b, r-g, g-b, ofs % width, ofs / width);
+	}
+	
 	
 	private static void analyzeImageData(Picture pic) {
 		int w = pic.width;
@@ -91,7 +129,11 @@ public class WeatherStats {
 		for (int y = 0; y < h; y++) {
 			for (int x = 0; x < w; x++) {
 				int dataOffset = y * width + x;
-				analyzePixel(pic.getBGR(x, y), dataOffset);
+				if (mask != null) {
+					analyzePixelWithMask(pic.getBGR(x, y), dataOffset);
+				} else {
+					analyzePixelNoMask(pic.getBGR(x, y), dataOffset);
+				}
 			}
 		}
 	}
@@ -128,6 +170,9 @@ public class WeatherStats {
 	private static string replacePath(string pathName, string newPath) {
 		int lastSlash = pathName.LastIndexOf("\\");
 		lastSlash = (lastSlash >= 0) ? (lastSlash + 1) : 0;
+		if (!newPath.EndsWith("\\")) {
+			newPath += '\\';
+		}
 		return newPath + pathName.Substring(lastSlash);
 	}
 	
