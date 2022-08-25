@@ -241,6 +241,18 @@ public class WeatherStats {
 	}
 	
 	
+	private static double calcAutoMult(int[] data, string dbgName) {
+		double maxAvg = 0;
+		foreach (int val in data) {
+			double average = val / 4f / analyzedCount;
+			if (average > maxAvg) maxAvg = average;
+		}
+		double mult = 1.0 / maxAvg;
+		logFile.WriteLine("For {0}, calculated maxAvg = {1} --> mult = {2}", dbgName, maxAvg, mult);
+		return mult;
+	}
+	
+	
 	private static void outputResults(string outDir, string ext) {
 		if ((width <= 0) || (height <= 0)) {
 			return; // No images was parsed. Size unknown.
@@ -248,21 +260,42 @@ public class WeatherStats {
 		if (!outDir.EndsWith("\\")) {
 			outDir += "\\";
 		}
-		double mult = Options.getDouble("mult");
-
 		System.IO.Directory.CreateDirectory(outDir);
+		double maxAvg, mult;
+		
+		// ======== OVERALL ========
+		
+		mult = Options.getDouble("mult");
+		if (mult <= 0) {
+			mult = calcAutoMult(overall, "overall");
+		}
 
 		logFile.WriteLine("Generating image: overall");
+		maxAvg = 0;
 		outputResult(outDir + "overall" + ext, true, (int x, int y, out int bgr) => {
-			double average = overall[y * width + x] * mult / 4 / analyzedCount;
+			double average = overall[y * width + x] * mult / 4f / analyzedCount;
+			if (average > maxAvg) maxAvg = average;
 			mapFrequencyColors(average, x, y, mainColors, out bgr);
 		});
+		logFile.WriteLine("Average max: {0}", maxAvg);
+
+		// ======== WIND ========
+
+		mult = Options.getDouble("windmult");
+		if (mult <= 0) {
+			mult = calcAutoMult(wind, "wind");
+		}
 
 		logFile.WriteLine("Generating image: wind");
+		maxAvg = 0;
 		outputResult(outDir + "wind" + ext, true, (int x, int y, out int bgr) => {
 			double average = wind[y * width + x] * mult  / 4f / analyzedCount;
+			if (average > maxAvg) maxAvg = average;
 			mapFrequencyColors(average, x, y, mainColors, out bgr);
 		});
+		logFile.WriteLine("Average max: {0}", maxAvg);
+
+		// ======== UNPARSED ========
 
 		logFile.WriteLine("Generating image: unparsed");
 		int unparsedCount = 0;
