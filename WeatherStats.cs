@@ -181,15 +181,20 @@ public class WeatherStats {
 	
 	
 	private static void mapColor(double v, int bgrMin, int bgrMax, out int bgr) {
+		//logFile.WriteLine("..... Maping {0} between BGR ({1:X6}...{2:X6})", v, bgrMin, bgrMax);
 		int bmin = ((bgrMin >> 16) & 0xFF);
 		int gmin = ((bgrMin >> 8) & 0xFF);
 		int rmin = (bgrMin & 0xFF);
+		//logFile.WriteLine("..... BGR min = ({0}, {1}, {2})", bmin, gmin, rmin);
 		int b = ((bgrMax >> 16) & 0xFF) - bmin;
 		int g = ((bgrMax >> 8) & 0xFF) - gmin;
 		int r = (bgrMax & 0xFF) - rmin;
+		//logFile.WriteLine("..... BGR max-min = ({0}, {1}, {2})", b, g, r);
+		//logFile.WriteLine("..... BGR multiplied = ({0}, {1}, {2}) + min = ({3}, {4}, {5})", b * v, g * v, r * v, b * v + bmin, g * v + gmin, r * v + rmin);
 		b = ((int)(b * v) + bmin) & 0xFF;
 		g = ((int)(g * v) + gmin) & 0xFF;
 		r = ((int)(r * v) + rmin) & 0xFF;
+		//logFile.WriteLine("..... BGR multiplied = ({0}, {1}, {2})", b, g, r);
 		bgr = (b << 16) | (g << 8) | r;
 	}
 	
@@ -209,25 +214,26 @@ public class WeatherStats {
 	
 	
 	private static void mapFrequencyColors(double average, ColorMap[] colors, out int bgr) {
-		if (average <= 0f) {
-			bgr = 0xFFFFFF; // Background.
-		} else {
-			double lowVal = colors[0].val;
-			int minColor = colors[0].bgr;
-			foreach (ColorMap map in colors) {
-				if (average < map.val) {
-					double correctedAverage = (average - lowVal) * (map.val - lowVal);
-					mapColor(average, minColor, map.bgr, out bgr);
-					//logFile.WriteLine("avg {0} < {1} -> {2} -> {3:X6}", average, map.val, correctedAverage, bgr);
-					return;
-				} else {
-					lowVal = map.val;
-					minColor = map.bgr;
-				}
+		double lowVal = colors[0].val;
+		int minColor = colors[0].bgr;
+		foreach (ColorMap map in colors) {
+			if (average == map.val) {
+				bgr = map.bgr;
+				//logFile.WriteLine("avg {0} exact -> {1:X6}", average, bgr);
+				return;
 			}
-			bgr = colors[colors.Length - 1].bgr;
-			//logFile.WriteLine("avg {0} other -> {1:X6}", average, bgr);
+			if (average < map.val) {
+				double correctedAverage = (average - lowVal) / (map.val - lowVal);
+				mapColor(correctedAverage, minColor, map.bgr, out bgr);
+				//logFile.WriteLine("avg {0} < {1} -> {2} -> {3:X6}", average, map.val, correctedAverage, bgr);
+				return;
+			} else {
+				lowVal = map.val;
+				minColor = map.bgr;
+			}
 		}
+		bgr = colors[colors.Length - 1].bgr;
+		//logFile.WriteLine("avg {0} exceed -> {1:X6}", average, bgr);
 	}
 	
 	
@@ -243,12 +249,19 @@ public class WeatherStats {
 	
 	private static double calcAutoMult(int[] data, string dbgName) {
 		double maxAvg = 0;
-		foreach (int val in data) {
-			double average = val / 4f / analyzedCount;
-			if (average > maxAvg) maxAvg = average;
+		int xpos = 0, ypos = 0;
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				double average = data[y * width + x] / 4f / analyzedCount;
+				if (average > maxAvg) {
+					maxAvg = average;
+					xpos = x;
+					ypos = y;
+				}
+			}
 		}
 		double mult = 1.0 / maxAvg;
-		logFile.WriteLine("For {0}, calculated maxAvg = {1} --> mult = {2}", dbgName, maxAvg, mult);
+		logFile.WriteLine("For {0}, calculated maxAvg = {1} --> mult = {2} at point ({3}, {4})", dbgName, maxAvg, mult, xpos, ypos);
 		return mult;
 	}
 	
@@ -360,7 +373,8 @@ public class WeatherStats {
 	public static void testColorMapper() {
 		logFile.WriteLine("*** TEST: testColorMapper");
 		int bgr;
-		for (double average = 0.0; average <= 1.1; average += 0.05) {
+		for (int k = 0; k < 110; k++) {
+			double average = k / 100.0;
 			for (int i = 0; i < mainColors.Length; i++) {
 				if (Math.Abs(mainColors[i].val - average) < 0.0001) {
 					logFile.WriteLine("+++++ BEGIN LINE {0}: {1:N2} -> {2:X6}", i, mainColors[i].val, mainColors[i].bgr);
